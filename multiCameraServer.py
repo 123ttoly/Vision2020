@@ -362,5 +362,5 @@ if __name__ == "__main__":
                 output.append(contour)
             return output d x y
             d = int((3.25 * 640)/(2 * w * 30.5))
-            print(d, x, y)
+        print(d, x, y)
         
