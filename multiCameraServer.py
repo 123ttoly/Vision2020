@@ -359,8 +359,8 @@ if __name__ == "__main__":
                 ratio = (float)(w) / h
                 if (ratio < min_ratio or ratio > max_ratio):
                     continue
+                d = float((3.25 * 640)/(2 * w * 30.5))
                 output.append(contour)
             return output d x y
-            d = int((3.25 * 640)/(2 * w * 30.5))
         print(d, x, y)
         
