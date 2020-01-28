@@ -13,7 +13,7 @@ import cv2
 import numpy
 import math
 from enum import Enum
-from cscore import CameraServer, VideoSource, UsbCamera, MjpegServer
+from cscore import CameraServer, VideoSource, UsbCamera, MjpegServer, CvSink, VideoSink
 from networktables import NetworkTablesInstance
 import ntcore
 
@@ -67,6 +67,7 @@ server = False
 cameraConfigs = []
 switchedCameraConfigs = []
 cameras = []
+sink = 0
 
 __hsv_threshold_hue = [59.89208633093525, 100.13651877133107]
 __hsv_threshold_saturation = [139.88309352517987, 255.0]
@@ -200,6 +201,7 @@ def readConfig():
 
 def startCamera(config):
     """Start running the camera."""
+    global sink
     print("Starting camera '{}' on {}".format(config.name, config.path))
     inst = CameraServer.getInstance()
     camera = UsbCamera(config.name, config.path)
@@ -207,6 +209,8 @@ def startCamera(config):
 
     camera.setConfigJson(json.dumps(config.config))
     camera.setConnectionStrategy(VideoSource.ConnectionStrategy.kKeepOpen)
+
+    sink = inst.getVideo()
 
     if config.streamConfig is not None:
         server.setConfigJson(json.dumps(config.streamConfig))
@@ -253,6 +257,11 @@ def __filter_contours(input_contours, min_area, min_perimeter, min_width, max_wi
                     min_height, max_height, solidity, max_vertex_count, min_vertex_count,
                     min_ratio, max_ratio):
     output = []
+    position = []
+    x = int(0)
+    y = int(0)
+    w = int(0)
+    h = int(0)
     for contour in input_contours:
         x,y,w,h = cv2.boundingRect(contour)
         if (w < min_width or w > max_width):
@@ -275,10 +284,11 @@ def __filter_contours(input_contours, min_area, min_perimeter, min_width, max_wi
             continue
         d = float((3.25 * 640)/(2 * w * 30.5))
         output.append(contour)
-        return output
-        return d
-        return x
-        return y
+        position.append(d)
+        position.append(x)
+        position.append(y)
+        position.append(output)
+        return position
     
         
 if __name__ == "__main__":
@@ -306,17 +316,14 @@ if __name__ == "__main__":
     for config in switchedCameraConfigs:
         startSwitchedCamera(config)
 
-    cap = cv2.VideoCapture(0)
-    cap.set(10, 0.1)
-
+    img = numpy.zeros(shape=(480, 640, 3), dtype=numpy.uint8)
+    
     # loop forever
     while True:
-
-        ret, frame = cap.read()
-
+       
         # Step HSV_Threshold0:
-        #__hsv_threshold_input = cameras[0]
-        (hsv_threshold_output) =  __hsv_threshold( frame,  __hsv_threshold_hue,  __hsv_threshold_saturation,  __hsv_threshold_value)
+        __hsv_threshold_input = sink.grabFrame(img)
+        (hsv_threshold_output) =  __hsv_threshold( img,  __hsv_threshold_hue,  __hsv_threshold_saturation,  __hsv_threshold_value)
 
         # Step Find_Contours0:
         __find_contours_input =  hsv_threshold_output
@@ -325,4 +332,6 @@ if __name__ == "__main__":
         # Step Filter_Contours0:
         __filter_contours_contours =  find_contours_output
         ( filter_contours_output) =  __filter_contours( __filter_contours_contours,  __filter_contours_min_area,  __filter_contours_min_perimeter,  __filter_contours_min_width,  __filter_contours_max_width,  __filter_contours_min_height,  __filter_contours_max_height,  __filter_contours_solidity,  __filter_contours_max_vertices,  __filter_contours_min_vertices,  __filter_contours_min_ratio,  __filter_contours_max_ratio)
-        print(d, x, y)
+        
+        if filter_contours_output is not None:
+            print(filter_contours_output[0], filter_contours_output[1], filter_contours_output[2])
